@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.navigation.Navigation
+import androidx.navigation.compose.rememberNavController
+import com.example.likhlo.ui.NavGraph
 import com.example.likhlo.ui.screens.Welcome
 import com.example.likhlo.ui.theme.ContentBackgroundColor
 import com.example.likhlo.ui.theme.LikhloTheme
@@ -21,7 +24,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = ContentBackgroundColor,
                 ) {
-                    Welcome()
+                    val navController = rememberNavController()
+                    NavGraph(navController = navController)
                 }
             }
         }

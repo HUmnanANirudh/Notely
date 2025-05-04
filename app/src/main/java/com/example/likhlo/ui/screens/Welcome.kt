@@ -10,15 +10,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.likhlo.R
+import com.example.likhlo.ui.theme.ButtonColor
 
 @Composable
-fun Welcome() {
+fun Welcome(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -31,9 +33,9 @@ fun Welcome() {
             Text(
                 text = "LikhLo",
                 style = TextStyle(
-                    fontSize = 28.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Cursive
+                    fontStyle = FontStyle.Italic
                 )
             )
 
@@ -45,10 +47,9 @@ fun Welcome() {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(330.dp)
+                    .height(315.dp)
             )
             Column(
-                modifier = Modifier.padding(horizontal = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
 
@@ -61,7 +62,7 @@ fun Welcome() {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Join 10M+ users already capturing their ideas with LikhLo!",
                     fontSize = 18.sp,
@@ -71,32 +72,33 @@ fun Welcome() {
                 )
             }
         }
-
-        // Bottom Section
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Button(
                 onClick = {
-
+                    navController.navigate("Signup")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(70.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF333333),
+                    containerColor = ButtonColor,
                     contentColor = Color.White
                 )
             ) {
-                Text(text = "Get Started", fontSize = 16.sp)
+                Text(text = "GET STARTED", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             TextButton(
                 onClick = {
-
+                    navController.navigate("Login")
                 },
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFF333333)
+                    contentColor = Color.DarkGray
                 )
             ) {
                 Text(text = "Already have an account? Login")
