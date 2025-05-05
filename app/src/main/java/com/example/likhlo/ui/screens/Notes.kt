@@ -90,14 +90,13 @@ fun Notes(navController: NavController) {
                     .fillMaxWidth()
                     .height(300.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = {
                     // TODO: Connect to backend to fetch all the notes
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(70.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = ButtonColor,
                     contentColor = Color.White
