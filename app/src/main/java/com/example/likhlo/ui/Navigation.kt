@@ -13,7 +13,7 @@ import com.example.likhlo.ui.screens.Welcome
 fun NavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = "welcome"
+        startDestination = "notes"
     ) {
         composable("welcome") {
             Welcome(navController)
