@@ -1,5 +1,7 @@
 package com.example.likhlo.ui.screens
 
+import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,10 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,12 +36,50 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.likhlo.ui.theme.ButtonColor
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
+@Serializable
+data class SignupRequest(val email:String,val username:String,val password:String)
+
+@Serializable
+data class AuthResponse(val jwt:String)
+
+val signupClient = HttpClient(CIO){
+    install(ContentNegotiation){
+        json(Json { ignoreUnknownKeys = true })
+    }
+}
+suspend fun signupRequest(username: String, email: String, password: String): Result<String> {
+    return try {
+        val response = signupClient.post("https://likhlo.shukurenai123.workers.dev/api/v1/users/SignUp") {
+            contentType(ContentType.Application.Json)
+            setBody(SignupRequest(email, username, password))
+        }
+        val data: AuthResponse = response.body()
+        Result.success(data.jwt)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+}
 @Composable
 fun Signup(navController: NavController) {
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -81,7 +123,6 @@ fun Signup(navController: NavController) {
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-
             val textFieldColors = OutlinedTextFieldDefaults. colors(
                 focusedBorderColor = Color.Black,
                 unfocusedBorderColor = Color.White,
@@ -131,8 +172,24 @@ fun Signup(navController: NavController) {
             }
             Button(
                 onClick = {
-                    // TODO: Call your sign-up API here
-                },
+                    scope.launch {
+                        if (email.isBlank() || password.isBlank() || username.isBlank()) {
+                            Toast.makeText(context, "Please ensure all the fields are filled", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        val result = signupRequest(username, email, password)
+                        result.onSuccess { jwt ->
+                            Toast.makeText(context, "Signup successful!", Toast.LENGTH_SHORT).show()
+                            navController.navigate("Login")
+                        }.onFailure {
+                            Toast.makeText(
+                                context,
+                                "Signup failed: ${it.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                    },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp)

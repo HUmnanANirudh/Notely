@@ -1,5 +1,6 @@
 package com.example.likhlo.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,10 +20,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,11 +35,50 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.likhlo.ui.theme.ButtonColor
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
+@Serializable
+data class LoginRequest(val email:String,val password:String)
+
+@Serializable
+data class Response(val jwt: String)
+
+val client = HttpClient(CIO){
+    install(ContentNegotiation){
+        json(Json { ignoreUnknownKeys = true })
+    }
+}
+suspend fun loginRequest(email: String, password: String): Result<String> {
+    return try {
+        val response = client.post("https://likhlo.shukurenai123.workers.dev/api/v1/users/SignIn") {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest(email, password))
+        }
+
+        val data:Response = response.body()
+        Result.success(data.jwt)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+}
 @Composable
 fun Login(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -79,7 +121,6 @@ fun Login(navController: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-
             val textFieldColors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color.Black,
                 unfocusedBorderColor = Color.White,
@@ -89,9 +130,7 @@ fun Login(navController: NavController) {
                 unfocusedLabelColor = Color.Black,
                 focusedTextColor = Color.Black,
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Column(
                 modifier = Modifier.width(300.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -105,9 +144,7 @@ fun Login(navController: NavController) {
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -117,13 +154,22 @@ fun Login(navController: NavController) {
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                 )
-
                 Spacer(modifier = Modifier.height(40.dp))
             }
-
             Button(
                 onClick = {
-                    // TODO: Handle login action
+                    scope.launch {
+                        if (email.isBlank() || password.isBlank()) {
+                            Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        val result = loginRequest(email, password)
+                        result.onSuccess { jwt ->
+                            Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                        }.onFailure {
+                            Toast.makeText(context, "Login failed: ${it.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
