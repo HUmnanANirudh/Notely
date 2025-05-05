@@ -1,5 +1,6 @@
 package com.example.likhlo.ui.screens
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -47,28 +49,74 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
-@Serializable
-data class LoginRequest(val email:String,val password:String)
-
-@Serializable
-data class Response(val jwt: String)
-
-val client = HttpClient(CIO){
-    install(ContentNegotiation){
-        json(Json { ignoreUnknownKeys = true })
+val client = HttpClient(CIO) {
+    install(ContentNegotiation) {
+        json(Json {
+            ignoreUnknownKeys = true
+            isLenient = true  // Add this for more lenient parsing
+            coerceInputValues = true  // Helps with null handling
+        })
     }
 }
+
+@Serializable
+data class LoginRequest(val email: String, val password: String)
+
+@Serializable
+data class LoginResponse(
+    @SerialName("jwt")
+    val jwt: String
+)
 suspend fun loginRequest(email: String, password: String): Result<String> {
     return try {
+        // Log the request data for debugging
+        println("Attempting login with email: $email")
+
+        // Perform the POST request
         val response = client.post("https://likhlo.shukurenai123.workers.dev/api/v1/users/SignIn") {
             contentType(ContentType.Application.Json)
             setBody(LoginRequest(email, password))
         }
 
-        val data:Response = response.body()
-        Result.success(data.jwt)
+        // Get the response as text first for debugging
+        val responseText = response.bodyAsText()
+        println("Raw response status: ${response.status}")
+        println("Raw response: $responseText")
+
+        // Check if the response contains an error message
+        if (responseText.contains("Invalid password") || responseText.contains("No such user exists")) {
+            // This is a valid server response indicating authentication failed
+            return Result.failure(Exception(
+                if (responseText.contains("Invalid password")) "Invalid password"
+                else "User not found"
+            ))
+        }
+
+        // If we have a successful response, try to parse it
+        try {
+            val loginResponse: LoginResponse = Json.decodeFromString(responseText)
+            Result.success(loginResponse.jwt)
+        } catch (e: Exception) {
+            // If standard deserialization fails, try manual parsing
+            val jwtRegex = "\"jwt\"\\s*:\\s*\"([^\"]+)\"".toRegex()
+            val matchResult = jwtRegex.find(responseText)
+            val jwt = matchResult?.groupValues?.get(1)
+
+            if (jwt != null) {
+                Result.success(jwt)
+            } else {
+                throw Exception("Failed to extract JWT from response: $responseText")
+            }
+        }
     } catch (e: Exception) {
+        println("Login error: ${e.message}")
+        e.printStackTrace()
         Result.failure(e)
     }
 }
@@ -76,6 +124,8 @@ suspend fun loginRequest(email: String, password: String): Result<String> {
 fun Login(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var loginError by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -163,11 +213,40 @@ fun Login(navController: NavController) {
                             Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        val result = loginRequest(email, password)
-                        result.onSuccess { jwt ->
-                            Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-                        }.onFailure {
-                            Toast.makeText(context, "Login failed: ${it.message}", Toast.LENGTH_LONG).show()
+
+                        isLoading = true
+                        loginError = ""
+
+                        try {
+                            val result = loginRequest(email, password)
+                            result.onSuccess { jwt ->
+                                // Store JWT in SharedPreferences or DataStore
+                                val sharedPrefs = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                                sharedPrefs.edit().putString("jwt_token", jwt).apply()
+
+                                Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                                navController.navigate("notes")
+                            }.onFailure { throwable ->
+                                if (throwable.message?.contains("Invalid password") == true) {
+                                    loginError = "Invalid password. Please check and try again."
+                                    Toast.makeText(context, loginError, Toast.LENGTH_LONG).show()
+                                } else if (throwable.message?.contains("User not found") == true) {
+                                    loginError = "User not found. Please check your email."
+                                    Toast.makeText(context, loginError, Toast.LENGTH_LONG).show()
+                                } else {
+                                    loginError = "Login failed: ${throwable.message ?: "Unknown error"}"
+                                    Toast.makeText(context, loginError, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            loginError = "Exception: ${e.message}"
+                            Toast.makeText(
+                                context,
+                                "Login error: ${e.message ?: "Unknown error"}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } finally {
+                            isLoading = false
                         }
                     }
                 },
@@ -178,13 +257,17 @@ fun Login(navController: NavController) {
                 colors = ButtonDefaults.buttonColors(
                     containerColor = ButtonColor,
                     contentColor = Color.White
-                )
-            ) {
-                Text("LOGIN", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                ),
+                enabled = !isLoading
+            )
+            {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.DarkGray, modifier = Modifier.height(24.dp))
+                } else {
+                    Text("LOGIN", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
-
             Spacer(modifier = Modifier.height(4.dp))
-
             TextButton(
                 onClick = {
                     navController.navigate("Signup")

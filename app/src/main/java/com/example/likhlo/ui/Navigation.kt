@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.NavHostController
 import com.example.likhlo.ui.screens.Login
+import com.example.likhlo.ui.screens.Notes
 import com.example.likhlo.ui.screens.Signup
 import com.example.likhlo.ui.screens.Welcome
 
@@ -22,6 +23,9 @@ fun NavGraph(navController: NavHostController) {
         }
         composable("signup") {
             Signup(navController)
+        }
+        composable("notes") {
+            Notes(navController)
         }
     }
 }
