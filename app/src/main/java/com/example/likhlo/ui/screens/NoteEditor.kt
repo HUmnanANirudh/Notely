@@ -187,7 +187,7 @@ data class NoteResponse(val note: Note)
 suspend fun updateNote(noteId: String, title: String, content: String, context: Context): Result<Unit> {
     val token = getJwtToken(context) ?: return Result.failure(Exception("Token missing"))
     return try {
-        val response = client.put("https://likhlo.shukurenai123.workers.dev/api/v1/notes/update/$noteId") {
+        val response = client.put("https://likhlo.shukurenai123.workers.dev/api/v1/notes/$noteId") {
             headers { append("Authorization", "Bearer $token") }
             contentType(ContentType.Application.Json)
             setBody(Json.encodeToString(NoteUpdateRequest(title, content)))
