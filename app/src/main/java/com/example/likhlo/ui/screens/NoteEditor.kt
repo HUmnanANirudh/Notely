@@ -24,9 +24,9 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.util.InternalAPI
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-
 @Composable
 fun NoteEditor(
     navController: NavController,
@@ -38,7 +38,7 @@ fun NoteEditor(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
-    var isEditing by remember { mutableStateOf(noteId != null) }
+    val isEditing by remember { mutableStateOf(noteId != null) }
 
     LaunchedEffect(noteId) {
         if (noteId != null) {
@@ -58,7 +58,7 @@ fun NoteEditor(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Top bar
         Row(
@@ -78,13 +78,22 @@ fun NoteEditor(
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.width(48.dp)) // For balance
+            Spacer(modifier = Modifier.width(48.dp))
         }
-
+        val textFieldColors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color.Black,
+            unfocusedBorderColor = Color.White,
+            cursorColor = Color.Black,
+            unfocusedTextColor = Color.Black,
+            focusedLabelColor = Color.Black,
+            unfocusedLabelColor = Color.Black,
+            focusedTextColor = Color.Black,
+        )
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
             label = { Text("Title") },
+            colors = textFieldColors,
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,6 +104,7 @@ fun NoteEditor(
             value = content,
             onValueChange = { content = it },
             label = { Text("Content") },
+            colors = textFieldColors,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
@@ -136,8 +146,12 @@ fun NoteEditor(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = ButtonColor)
+                .padding(horizontal = 32.dp)
+                .height(70.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = ButtonColor,
+                contentColor = Color.White
+            )
         ) {
             Text(text = if (noteId == null) "Create Note" else "Update Note")
         }
@@ -166,14 +180,17 @@ suspend fun createNote(title: String, content: String, context: Context): Result
         Result.failure(e)
     }
 }
-
+@Serializable
+data class NoteUpdateRequest(val title: String, val content: String)
+@Serializable
+data class NoteResponse(val note: Note)
 suspend fun updateNote(noteId: String, title: String, content: String, context: Context): Result<Unit> {
     val token = getJwtToken(context) ?: return Result.failure(Exception("Token missing"))
     return try {
         val response = client.put("https://likhlo.shukurenai123.workers.dev/api/v1/notes/update/$noteId") {
             headers { append("Authorization", "Bearer $token") }
             contentType(ContentType.Application.Json)
-            setBody(Json.encodeToString(Note(id = noteId, title = title, content = content)))
+            setBody(Json.encodeToString(NoteUpdateRequest(title, content)))
         }
 
         if (response.status == HttpStatusCode.OK) Result.success(Unit)
@@ -183,15 +200,20 @@ suspend fun updateNote(noteId: String, title: String, content: String, context: 
         Result.failure(e)
     }
 }
-
 suspend fun fetchNoteById(noteId: String, context: Context): Result<Note> {
     val token = getJwtToken(context) ?: return Result.failure(Exception("Token missing"))
     return try {
         val response = client.get("https://likhlo.shukurenai123.workers.dev/api/v1/notes/$noteId") {
             headers { append("Authorization", "Bearer $token") }
         }
-        val body = response.bodyAsText()
-        Result.success(Json.decodeFromString(body))
+        if (response.status.isSuccess()) {
+            val body = response.bodyAsText()
+            val noteResponse = Json.decodeFromString<NoteResponse>(body)
+            Result.success(noteResponse.note)
+        } else {
+            val errorBody = response.bodyAsText()
+            Result.failure(Exception("Failed to fetch note: ${response.status}. $errorBody"))
+        }
     } catch (e: Exception) {
         e.printStackTrace()
         Result.failure(e)

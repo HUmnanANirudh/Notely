@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
@@ -51,7 +53,6 @@ fun Notes(navController: NavController) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Function to refresh notes
     fun refreshNotes() {
         coroutineScope.launch {
             isLoading = true
@@ -64,8 +65,6 @@ fun Notes(navController: NavController) {
             isLoading = false
         }
     }
-
-    // Delete note function
     val deleteNote: (String) -> Unit = { noteId ->
         coroutineScope.launch {
             isLoading = true
@@ -80,15 +79,10 @@ fun Notes(navController: NavController) {
             isLoading = false
         }
     }
-
-    // Fetch notes when the Composable is first loaded
     LaunchedEffect(Unit) {
         refreshNotes()
     }
-
-    // Rendering the UI
     Column(modifier = Modifier.fillMaxSize()) {
-        // App bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -104,8 +98,6 @@ fun Notes(navController: NavController) {
             )
             Icon(Icons.Rounded.Search, contentDescription = "Search")
         }
-
-        // Main content
         when {
             isLoading -> {
                 Box(
@@ -136,19 +128,34 @@ fun Notes(navController: NavController) {
                         onDelete = deleteNote
                     )
 
-                    // Floating action button to create new note
-                    FloatingActionButton(
-                        onClick = { navController.navigate("note_editor") },
+                    Column(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp),
-                        containerColor = ButtonColor
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = "Add Note",
-                            tint = Color.White
-                        )
+                        FloatingActionButton(
+                            onClick = { navController.navigate("note_editor") },
+                            containerColor = ButtonColor
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = "Add Note",
+                                tint = Color.White
+                            )
+                        }
+                        FloatingActionButton(
+                            onClick = { navController.navigate("Gemini") },
+                            shape = CircleShape,
+                            containerColor = ButtonColor
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Face,
+                                contentDescription = "Ask Gemini",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -249,7 +256,6 @@ fun NoteCard(
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // Handle long press for delete
     val haptic = LocalHapticFeedback.current
 
     Card(
@@ -280,7 +286,7 @@ fun NoteCard(
                 )
             },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(note.title, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -289,7 +295,6 @@ fun NoteCard(
         }
     }
 
-    // Delete confirmation dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -327,13 +332,9 @@ suspend fun fetchNotesKtor(context: Context): Result<List<Note>> {
 
         val responseText = response.bodyAsText()
         println("Notes API response: $responseText")
-
-        // Check if response is successful
         if (response.status.isSuccess()) {
             try {
                 val json = Json.parseToJsonElement(responseText).jsonObject
-
-                // Check if Notes field exists
                 if (json.containsKey("Notes")) {
                     val notesJson = json["Notes"]
                     val notes = Json.decodeFromJsonElement<List<Note>>(notesJson!!)

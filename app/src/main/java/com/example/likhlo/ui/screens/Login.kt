@@ -220,7 +220,6 @@ fun Login(navController: NavController) {
                         try {
                             val result = loginRequest(email, password)
                             result.onSuccess { jwt ->
-                                // Store JWT in SharedPreferences or DataStore
                                 val sharedPrefs = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
                                 sharedPrefs.edit().putString("jwt_token", jwt).apply()
 

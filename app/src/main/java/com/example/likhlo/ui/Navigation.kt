@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.likhlo.GeminiScreen
 import com.example.likhlo.ui.screens.Login
 import com.example.likhlo.ui.screens.NoteEditor
 import com.example.likhlo.ui.screens.Notes
@@ -38,6 +39,9 @@ fun NavGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val noteId = backStackEntry.arguments?.getString("noteId")
             NoteEditor(navController = navController, noteId = noteId)
+        }
+        composable("Gemini") {
+            GeminiScreen(navController = navController)
         }
     }
 }
