@@ -45,13 +45,11 @@ NotesRoute.get('/all',async (c)=>{
     const userid = c.get("UserId");
     try{
         const Notes = await prisma.notes.findMany({
-            where:{id: userid},
+            where:{userId: userid},
             select:{
                 id:true,
                 title:true,
                 content:true,
-                createdAt:true,
-                updatedAt:true
             },
             orderBy:{updatedAt:'desc'}
         })
@@ -70,6 +68,10 @@ NotesRoute.get('/:id',async (c)=>{
             where:{
                 id:notesid,
                 userId
+            },select:{
+                id:true,
+                title:true,
+                content:true
             }
         })
         if(!note){
@@ -182,9 +184,6 @@ NotesRoute.get('/', async(c)=>{
                         }
                     }
                 ]
-            },
-            orderBy:{
-                updatedAt:"desc"
             }
         })
         return c.json({result})
