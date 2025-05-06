@@ -230,7 +230,14 @@ fun Signup(navController: NavController) {
                                 if (throwable.message?.contains("User already exists") == true) {
                                     signupError = "User already exists with this email or username"
                                     Toast.makeText(context, signupError, Toast.LENGTH_LONG).show()
-                                } else {
+                                }else if (throwable.message?.contains("Please Enter a valid Email") == true) {
+                                    signupError = "Please Enter a valid Email Id"
+                                    Toast.makeText(context, signupError, Toast.LENGTH_LONG).show()
+                                }else if (throwable.message?.contains("Invalid password") == true) {
+                                    signupError = "Invalid password"
+                                    Toast.makeText(context, signupError, Toast.LENGTH_LONG).show()
+                                }
+                                else {
                                     signupError = "Signup failed: ${throwable.message ?: "Unknown error"}"
                                     Toast.makeText(context, signupError, Toast.LENGTH_LONG).show()
                                 }

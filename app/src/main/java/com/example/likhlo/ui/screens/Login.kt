@@ -232,6 +232,9 @@ fun Login(navController: NavController) {
                                 } else if (throwable.message?.contains("User not found") == true) {
                                     loginError = "User not found. Please check your email."
                                     Toast.makeText(context, loginError, Toast.LENGTH_LONG).show()
+                                } else if (throwable.message?.contains("Please Enter a valid Email") == true) {
+                                    loginError = "Please Enter a valid Email Id"
+                                    Toast.makeText(context, loginError, Toast.LENGTH_LONG).show()
                                 } else {
                                     loginError = "Login failed: ${throwable.message ?: "Unknown error"}"
                                     Toast.makeText(context, loginError, Toast.LENGTH_LONG).show()
