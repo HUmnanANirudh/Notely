@@ -3,7 +3,17 @@ import { PrismaClient } from "../generated/prisma";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import bcrypt from "bcryptjs";
 import { sign } from "hono/jwt";
+import { z } from "zod"
 
+const SignUpSchema = z.object({
+  Username:z.string(),
+  email:z.string().email(),
+  password:z.string()
+})
+const SignInSchema = z.object({
+  email:z.string().email(),
+  password:z.string()
+})
 export const UserRoute = new Hono<{
   Bindings: {
     DATABASE_URL: string;
@@ -25,7 +35,11 @@ UserRoute.get("/", async (c) => {
 UserRoute.post("/SignUp", async (c) => {
   const prisma = getPrismaClient(c.env.DATABASE_URL);
   const body = await c.req.json();
-
+  const {success} = SignUpSchema.safeParse(body)
+  if(!success){
+    c.status(403);
+    return c.json({msg:"Please Enter a valid Email"})
+  }
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ email: body.email }, { Username: body.Username }],
@@ -58,6 +72,11 @@ UserRoute.post("/SignUp", async (c) => {
 UserRoute.post("/SignIn", async (c) => {
   const prisma = getPrismaClient(c.env.DATABASE_URL);
   const body = await c.req.json();
+  const {success} = SignInSchema.safeParse(body)
+  if(!success){
+    c.status(403);
+    return c.json({msg:"Please Enter a valid Email id"})
+  }
   const user = await prisma.user.findUnique({
     where: {
       email: body.email,
